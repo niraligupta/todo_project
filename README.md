@@ -23,7 +23,6 @@ This project includes:
 
 ### ✔ Templates
 - `index.html` → Task list  
-- `add_task.html` → Add new task  
 - `edit_task.html` → Edit only status  
 
 ### ✔ Database
@@ -35,27 +34,6 @@ This project includes:
 - `pytest` tests included  
 - Temporary SQLite DB used for tests  
 - Covers create, read, update, delete, list operations  
-
----
-# 📂 Project Structure
-todo_project/
-│── tasks/
-│   ├── db.py
-│   ├── views.py
-│   ├── urls.py
-│   ├── templates/
-│       ├── index.html
-│       ├── add_task.html
-│       ├── edit_task.html
-│   ├── test_api.py
-│
-│── todo_project/
-│   ├── settings.py
-│   ├── urls.py
-│
-│── manage.py
-│── README.md
-
 
 ---
 
