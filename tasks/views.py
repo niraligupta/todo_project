@@ -14,10 +14,6 @@ def index(request):
     return render(request, "index.html")
 
 
-@ensure_csrf_cookie
-def add_task_page(request):
-    return render(request, "add_task.html")
-
 
 @ensure_csrf_cookie
 def edit_task_page(request, task_id):
