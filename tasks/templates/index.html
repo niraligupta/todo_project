@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>To-Do — Tasks</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body { padding: 1.5rem; }
+    .task-card { margin-bottom: 1rem; }
+    .cursor-pointer { cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h3">Tasks</h1>
+    <div>
+      <a href="/" class="btn btn-outline-secondary me-2">Refresh</a>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">+ Add Task</button>
+    </div>
+  </div>
+
+  <div id="tasksContainer" class="row">
+    <!-- tasks will be injected here -->
+  </div>
+
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="addForm" class="modal-content needs-validation" novalidate>
+      <div class="modal-header">
+        <h5 class="modal-title">Add Task</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Title <span class="text-danger">*</span></label>
+          <input name="title" class="form-control" required />
+          <div class="invalid-feedback">Title is required</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Due date</label>
+          <input type="date" name="due_date" id="add_due_date" class="form-control" />
+          <div class="invalid-feedback">Please choose a valid date</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Task Modal -->
+
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="editForm" class="modal-content needs-validation" novalidate>
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Task</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" name="task_id" id="edit_task_id" />
+
+        <div class="mb-3">
+          <label class="form-label">Title</label>
+          <input name="title" id="edit_title" class="form-control" disabled />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea name="description" id="edit_description" class="form-control" rows="3" disabled></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Due date</label>
+          <input type="date" name="due_date" id="edit_due_date" class="form-control" disabled />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Status</label>
+          <select name="status" id="edit_status" class="form-select">
+            <option value="pending">pending</option>
+            <option value="done">done</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-success">Save changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body">
+        <p class="mb-0">Are you sure you want to delete this task?</p>
+        <input type="hidden" id="delete_task_id" />
+      </div>
+      <div class="modal-footer p-2">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button id="confirmDeleteBtn" class="btn btn-danger btn-sm">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+  <div id="toasts"></div>
+</div>
+
+<!-- Bootstrap 5 bundle (includes Popper) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+/* ======== Utilities ======== */
+function getCookie(name) {
+  // minimal cookie parser for csrftoken
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+function showToast(message, isSuccess = true) {
+  const id = 't' + Date.now();
+  const toastHtml = `
+    <div id="${id}" class="toast align-items-center text-bg-${isSuccess ? 'success' : 'danger'} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">${message}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>`;
+  const container = document.getElementById('toasts');
+  container.insertAdjacentHTML('beforeend', toastHtml);
+  const toastEl = document.getElementById(id);
+  const bsToast = new bootstrap.Toast(toastEl, { delay: 3000 });
+  bsToast.show();
+  // remove after hidden
+  toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+}
+
+/* ======== Date constraints: prevent past dates ======== */
+const todayISO = new Date().toISOString().split('T')[0];
+document.getElementById('add_due_date').setAttribute('min', todayISO);
+document.getElementById('edit_due_date')?.setAttribute('min', todayISO);
+
+/* ======== Fetch + Render Tasks ======== */
+async function loadTasks() {
+  try {
+    const res = await fetch('/api/tasks/');
+    const data = await res.json();
+    const tasks = data.tasks || [];
+    const container = document.getElementById('tasksContainer');
+    container.innerHTML = '';
+    if (!tasks.length) {
+      container.innerHTML = '<div class="col-12"><div class="alert alert-info">No tasks yet. Click Add to create one.</div></div>';
+      return;
+    }
+    for (const t of tasks) {
+      const card = document.createElement('div');
+      card.className = 'col-12 col-md-6';
+      card.innerHTML = `
+        <div class="card task-card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between">
+              <h5 class="card-title mb-1">${escapeHtml(t.title)}</h5>
+              <div>
+                <span class="badge bg-${t.status === 'done' ? 'success' : 'secondary'}">${t.status}</span>
+              </div>
+            </div>
+            <p class="card-text small text-muted mb-1">${t.due_date ? 'Due: ' + t.due_date : ''}</p>
+            <p class="card-text">${escapeHtml(t.description || '')}</p>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-primary" onclick="openEditModal(${t.id})">Edit</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="openDeleteModal(${t.id})">Delete</button>
+              <a class="btn btn-sm btn-outline-secondary" href="/edit/${t.id}/">Open Edit Page</a>
+            </div>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load tasks', false);
+  }
+}
+
+/* Escape text to avoid HTML injection */
+function escapeHtml(s) {
+  if (!s) return '';
+  return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
+}
+
+/* ======== Add Task ======== */
+const addForm = document.getElementById('addForm');
+addForm.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  // bootstrap validation
+  if (!addForm.checkValidity()) {
+    addForm.classList.add('was-validated');
+    return;
+  }
+
+  const fd = new FormData(addForm);
+  const payload = {
+    title: fd.get('title'),
+    description: fd.get('description'),
+    due_date: fd.get('due_date') || null
+  };
+
+  try {
+    const res = await fetch('/api/tasks/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify(payload)
+    });
+    if (res.status === 201) {
+      showToast('Task added');
+      bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
+      addForm.reset();
+      addForm.classList.remove('was-validated');
+      loadTasks();
+    } else {
+      const d = await res.json().catch(()=>({error:'Unknown error'}));
+      showToast('Add failed: ' + (d.error || JSON.stringify(d)), false);
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Add request failed', false);
+  }
+});
+
+/* ======== Edit Task (modal) ======== */
+async function openEditModal(taskId) {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/`);
+    if (res.status !== 200) { showToast('Task not found', false); return; }
+    const data = await res.json();
+    const t = data.task;
+    document.getElementById('edit_task_id').value = t.id;
+    document.getElementById('edit_title').value = t.title || '';
+    document.getElementById('edit_description').value = t.description || '';
+    document.getElementById('edit_due_date').value = t.due_date || '';
+    document.getElementById('edit_status').value = t.status || 'pending';
+    // show modal
+    const m = new bootstrap.Modal(document.getElementById('editModal'));
+    m.show();
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to open edit', false);
+  }
+}
+
+const editForm = document.getElementById('editForm');
+editForm.addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const id = document.getElementById('edit_task_id').value;
+
+  // ONLY send status in payload
+  const payload = {
+    status: document.getElementById('edit_status').value
+  };
+
+  try {
+    const res = await fetch(`/api/tasks/${id}/`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.status === 200) {
+      showToast("Status updated successfully");
+      bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+      loadTasks();
+    } else {
+      const d = await res.json();
+      showToast(`Update failed: ${d.error}`, false);
+    }
+
+  } catch (error) {
+    console.error(error);
+    showToast("Update request failed", false);
+  }
+});
+
+
+/* ======== Delete ======== */
+function openDeleteModal(taskId) {
+  document.getElementById('delete_task_id').value = taskId;
+  const m = new bootstrap.Modal(document.getElementById('deleteModal'));
+  m.show();
+}
+
+document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
+  const id = document.getElementById('delete_task_id').value;
+  try {
+    const res = await fetch(`/api/tasks/${id}/`, {
+      method: 'DELETE',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    });
+    if (res.status === 200) {
+      showToast('Deleted');
+      bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+      loadTasks();
+    } else {
+      showToast('Delete failed', false);
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Delete request failed', false);
+  }
+});
+
+/* ======== Init ======== */
+window.addEventListener('load', () => {
+  loadTasks();
+});
+</script>
+</body>
+</html>
